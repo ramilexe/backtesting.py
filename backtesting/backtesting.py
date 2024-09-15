@@ -850,9 +850,10 @@ class _Broker:
                     continue
 
                 # stop_price, if set, was hit within this bar
-                price = (min(stop_price or open, order.limit)
-                         if order.is_long else
-                         max(stop_price or open, order.limit))
+                # price = (min(stop_price or open, order.limit)
+                #          if order.is_long else
+                #          max(stop_price or open, order.limit))
+                price = order.limit
             else:
                 # Market-if-touched / market order
                 price = prev_close if self._trade_on_close else open
