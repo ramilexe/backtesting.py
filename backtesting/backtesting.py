@@ -1486,7 +1486,7 @@ class Backtest:
             # Avoid recomputing re-evaluations:
             # "The objective has been evaluated at this point before."
             # https://github.com/scikit-optimize/scikit-optimize/issues/302
-            memoized_run = lru_cache()(lambda tup: self.run(**dict(tup)))
+            memoized_run = lru_cache(500)(lambda tup: self.run(**dict(tup)))
 
             # np.inf/np.nan breaks sklearn, np.finfo(float).max breaks skopt.plots.plot_objective
             INVALID = 1e300
@@ -1524,10 +1524,20 @@ class Backtest:
             stats = self.run(**dict(zip(kwargs.keys(), res.x)))
             output = [stats]
 
+            x_iters = []
+            names = list(kwargs.keys())
             if return_heatmap:
-                heatmap = pd.Series(dict(zip(map(tuple, res.x_iters), -res.func_vals)),
+                for values in res.x_iters:
+                    stat = memoized_run(zip(kwargs.keys(), values))
+                    new_values = values.copy()
+                    new_values.extend([stat['# Trades'], stat['Sharpe Ratio'], stat['Sortino Ratio'], stat['Calmar Ratio']])
+                    x_iters.append(new_values)
+
+                names.extend(["# Trades", "Sharpe Ratio", "Sortino Ratio", "Calmar Ratio"])
+
+                heatmap = pd.Series(dict(zip(map(tuple, x_iters), -res.func_vals)),
                                     name=maximize_key)
-                heatmap.index.names = kwargs.keys()
+                heatmap.index.names = names
                 heatmap = heatmap[heatmap != -INVALID]
                 heatmap.sort_index(inplace=True)
                 output.append(heatmap)
